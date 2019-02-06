@@ -1,0 +1,95 @@
+version: '2.2'
+
+services:
+  mongodb:
+    image: mongo:3
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    labels:
+      logger: "false"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.1
+    restart: always
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      - xpack.security.enabled=false
+      - xpack.watcher.enabled=false
+      - xpack.monitoring.enabled=false
+      - xpack.security.audit.enabled=false
+      - xpack.ml.enabled=false
+      - xpack.graph.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - cluster.name=graylog-cluster
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    labels:
+      logger: "false"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.5.1
+    restart: always
+    ports:
+      - 15601:5601
+    links:
+      - elasticsearch:elasticsearch
+    labels:
+      logger: "false"
+
+  graylog:
+    image: graylog/graylog:2.5
+    restart: always
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_WEB_ENDPOINT_URI=http://192.168.1.89:9000/api
+    links:
+      - mongodb:mongo
+      - elasticsearch
+    depends_on:
+      - mongodb
+      - elasticsearch
+    ports:
+      - 9000:9000
+#      - 514:514
+#      - 514:514/udp
+#      - 12201:12201
+      - 12201:12201/udp
+    volumes:
+      - graylog_journal:/usr/share/graylog/data/journal
+    labels:
+      logger: "false"
+
+  app:
+    build: .
+    restart: always
+    labels:
+      logger: "true"
+      my_label: "my value"
+
+  logspout:
+    image: micahhausler/logspout:gelf
+    command: gelf://graylog:12201?filter.labels=logger:true
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 9999:80
+    links:
+      - graylog:graylog
+    labels:
+      logger: "false"
+
+volumes:
+  es_data:
+  mongo_data:
+  graylog_journal:
