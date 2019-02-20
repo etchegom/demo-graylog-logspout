@@ -17,7 +17,7 @@ while True:
     message = {
         "counter": counter,
         "field_one": "field one content",
-        "field_ywo": "field two content"
+        "field_two": "field two content"
     }
 
     logger.info(message)
