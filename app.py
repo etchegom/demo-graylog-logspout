@@ -1,12 +1,25 @@
 import logging
 import time
 
+from pythonjsonlogger import jsonlogger
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO,
-                    format='%(levelname)s %(asctime)s %(message)s')
+
+handler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+logging.basicConfig(handlers=(handler,), level=logging.INFO)
 
 counter = 0
 while True:
-    logger.info("My log message %d" % counter)
+    message = {
+        "counter": counter,
+        "field_one": "field one content",
+        "field_ywo": "field two content"
+    }
+
+    logger.info(message)
     counter += 1
     time.sleep(1)
